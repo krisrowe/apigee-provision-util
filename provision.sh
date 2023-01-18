@@ -49,3 +49,28 @@ if [[ -z "${CONFIRM}" ]]; then
 else
   echo "Support range previously created."
 fi
+
+export CONFIRM=$(gcloud services vpc-peerings list --network=$NETWORK_NAME --project=$PROJECT_ID --service=servicenetworking.googleapis.com --format="value(peering)")
+if [[ -z "${CONFIRM}" ]]; then
+  gcloud services vpc-peerings connect \
+    --service=servicenetworking.googleapis.com \
+    --network=$NETWORK_NAME \
+    --ranges=$RANGE_NAME,google-managed-services-support-1 \
+    --project=$PROJECT_ID
+else
+  echo "VPC peering previously established."
+fi
+
+export CONFIRM=$(gcloud alpha apigee organizations list --filter="name:${PROJECT_ID}" --format="value(name)")
+if [[ -z "${CONFIRM}" ]]; then
+  gcloud alpha apigee organizations provision \
+    --runtime-location=$RUNTIME_LOCATION \
+    --analytics-region=$ANALYTICS_REGION \
+    --authorized-network=$NETWORK_NAME \
+    --project=$PROJECT_ID
+else
+  echo "Apigee organization previously provisioned."
+fi
+
+curl -i -X GET -H "$AUTH" \
+  "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances"
