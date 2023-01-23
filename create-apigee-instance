@@ -1,10 +1,48 @@
-if [[ -z "${PROJECT_ID}" ]]; then
+set -e
+
+SETTING_FOUND=$(cat settings.json | jq -r '.project')
+if [[ -z "${SETTING_FOUND}" ]]; then
+  if [[ -z "${PROJECT_ID}" ]]; then
     echo "Must set PROJECT_ID environment variable first."
     exit 1
-fi 
+  fi
+  echo "Using PROJECT_ID environment variable."
+else 
+  # Overwrite the environment variable with what was found in settings.
+  PROJECT_ID=${SETTING_FOUND}
+  echo "Using project ID ${PROJECT_ID} as per settings."
+fi
+
+SETTING_FOUND=$(cat settings.json | jq -r '.network')
+if [[ -z "${SETTING_FOUND}" ]]; then
+  if [[ -z "${NETWORK_NAME}" ]]; then
+    NETWORK_NAME=default
+    echo "Using ${NETWORK_NAME} network by default."
+  else 
+    echo "Using ${NETWORK_NAME} network as per NETWORK_NAME environment variable."
+  fi
+else 
+  # Overwrite the environment variable with what was found in settings.
+  NETWORK_NAME=$SETTING_FOUND
+  echo "Using ${NETWORK_NAME} network as per settings."
+fi
+
+SETTING_FOUND=$(cat settings.json | jq -r '.region')
+if [[ -z "${SETTING_FOUND}" ]]; then
+  if [[ -z "${REGION}" ]]; then
+    RUNTIME_LOCATION=us-central1
+    echo "Using ${RUNTIME_LOCATION} region by default."
+  else 
+    RUNTIME_LOCATION=$REGION
+    echo "Using ${RUNTIME_LOCATION} region as per REGION environment variable."
+  fi
+else 
+  # Overwrite the environment variable with what was found in settings.
+  RUNTIME_LOCATION=$SETTING_FOUND
+  echo "Using ${RUNTIME_LOCATION} region as per settings."
+fi
 
 export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
-export RUNTIME_LOCATION="us-central1"
 export ANALYTICS_REGION=$RUNTIME_LOCATION
 
 gcloud services enable apigee.googleapis.com \
@@ -12,7 +50,6 @@ gcloud services enable apigee.googleapis.com \
   cloudkms.googleapis.com --project=$PROJECT_ID
 
 export RANGE_NAME=google-svcs
-export NETWORK_NAME=demonet
 
 export CONFIRM=$(gcloud compute networks list --project=$PROJECT_ID --format="value(name)" --filter="name:${NETWORK_NAME}")
 if [[ -z "${CONFIRM}" ]]; then
@@ -72,18 +109,3 @@ else
   echo "Apigee organization previously provisioned."
 fi
 
-export TARGET_SERVICE=$(curl -X GET -H "$AUTH" "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
-
-export NEG_NAME=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:apigee")
-if [[ -z "${NEG_NAME}" ]]; then
-  echo "Provisioning NEG for PSC Target Service ${TARGET_SERVICE}." 
-  gcloud compute network-endpoint-groups create apigee \
-    --network-endpoint-type=private-service-connect \
-    --psc-target-service=$TARGET_SERVICE \
-    --network=$NETWORK_NAME \
-    --subnet=$NETWORK_NAME \
-    --region=$RUNTIME_LOCATION \
-    --project=$PROJECT_ID
-else
-  echo "Network endpoint group (NEG) previously provisioned."
-fi

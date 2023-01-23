@@ -1,0 +1,21 @@
+export TARGET_SERVICE=$(curl -X GET -H "$AUTH" "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
+
+export NEG_NAME=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:apigee")
+if [[ -z "${NEG_NAME}" ]]; then
+  echo "Provisioning NEG for PSC Target Service ${TARGET_SERVICE}." 
+  gcloud compute network-endpoint-groups create apigee \
+    --network-endpoint-type=private-service-connect \
+    --psc-target-service=$TARGET_SERVICE \
+    --network=$NETWORK_NAME \
+    --subnet=$NETWORK_NAME \
+    --region=$RUNTIME_LOCATION \
+    --project=$PROJECT_ID
+else
+  echo "Network endpoint group (NEG) previously provisioned."
+fi
+
+export TARGET_SERVICE=$(curl -X GET -H "$AUTH" "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
+
+
+# Check to see what environment groups are present.
+curl "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/envgroups/eval-group" -H "$AUTH"
