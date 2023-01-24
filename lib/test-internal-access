@@ -40,12 +40,15 @@ else
 fi
 
 {
+    echo "Running the following command from the temporary instance inside the VPC."
+    printf "\n${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n\n${NO_COLOR}"
+
     # Run a command on the instance to invoke an API in Apigee.
     API_RESPONSE=$(gcloud compute ssh ${TEMP_INSTANCE} --project=${PROJECT_ID} \
-        --zone=us-central1-a --quiet \
+        --zone=us-central1-a --tunnel-through-iap --strict-host-key-checking=no \
         --command="curl -k -H \"Host: ${APIGEE_HOST_NAME}\" -s \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"")
     # Show API response.
-    echo "Response from API running in Apigee: $API_RESPONSE"
+    printf "\nAPI response as the output of above curl command: ${HIGHLIGHT_COLOR}${API_RESPONSE}${NO_COLOR}\n"
     if [ "$API_RESPONSE" = "Hello, Guest!" ]; then
         printf "Test result: ${HIGHLIGHT_COLOR}success${NO_COLOR}\n"
     else
