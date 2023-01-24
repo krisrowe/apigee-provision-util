@@ -1,0 +1,18 @@
+export APIGEE_INSTANCE_JSON=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r ".instances[0]")
+export APIGEE_INSTANCE_NAME=$(echo $APIGEE_INSTANCE_JSON | jq -r ".name")
+export APIGEE_INSTANCE_HOST_IP=$(echo $APIGEE_INSTANCE_JSON | jq -r ".host")
+export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
+
+echo "**************************************"
+echo "*****     APIGEE ORG DETAILS     *****"
+echo "**************************************"
+printf "host name: ${HIGHLIGHT_COLOR}${APIGEE_HOST_NAME}${NO_COLOR}\n"
+printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${NO_COLOR}\n"
+printf "instance name: ${APIGEE_INSTANCE_NAME}\n"
+echo "**************************************"
+echo
+echo "Try the following from a machine instance inside the ${NETWORK_NAME} network of project ${PROJECT_ID}..."
+echo
+printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
+printf "${NO_COLOR}\n"
+printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./test-internal-access \n"

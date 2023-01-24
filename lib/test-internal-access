@@ -1,0 +1,2 @@
+printf "Testing ${HIGHLIGHT_COLOR}internal${NO_COLOR} access...\n"
+

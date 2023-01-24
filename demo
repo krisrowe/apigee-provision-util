@@ -1,6 +1,19 @@
+export HIGHLIGHT_COLOR='\033[0;31m'
+export EXAMPLE_COLOR='\033[0;36m'
+export NO_COLOR='\033[0m'
+export ERROR_COLOR='\033[1;31m'
+
+if [[ -z "$1" ]]; then
+    printf "${ERROR_COLOR}No command argument. Expected: ${EXAMPLE_COLOR}demo [command]\n"
+    exit 1
+fi
+
 set -e
 
-SETTING_FOUND=$(cat settings.json | jq -r '.project')
+# Note the directory where this main script resides.
+export REPO_DIRECTORY=$(dirname "$0")
+
+SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.project')
 if [[ -z "${SETTING_FOUND}" ]]; then
   if [[ -z "${PROJECT_ID}" ]]; then
     echo "Must set PROJECT_ID environment variable first."
@@ -13,7 +26,7 @@ else
   echo "Using project ID ${PROJECT_ID} as per settings."
 fi
 
-SETTING_FOUND=$(cat settings.json | jq -r '.network')
+SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.network')
 if [[ -z "${SETTING_FOUND}" ]]; then
   if [[ -z "${NETWORK_NAME}" ]]; then
     NETWORK_NAME=default
@@ -27,7 +40,7 @@ else
   echo "Using ${NETWORK_NAME} network as per settings."
 fi
 
-SETTING_FOUND=$(cat settings.json | jq -r '.region')
+SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.region')
 if [[ -z "${SETTING_FOUND}" ]]; then
   if [[ -z "${REGION}" ]]; then
     RUNTIME_LOCATION=us-central1
@@ -44,3 +57,22 @@ fi
 
 export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
 export ANALYTICS_REGION=$RUNTIME_LOCATION
+
+echo
+
+# Run the command specified by the user.
+# Apply a regex validation to avoid unsafe script/command execution.
+if [[ $1 =~ ^[A-Za-z0-9_-]+$ ]]; then
+    DEMO_COMMAND_PATH=${REPO_DIRECTORY}/lib/$1
+    if test -f "$DEMO_COMMAND_PATH"; then
+        . ${DEMO_COMMAND_PATH}
+    else
+        printf "${ERROR_COLOR}Command not found: $1\n"
+        exit 1
+    fi
+else
+    printf "${ERROR_COLOR}Invalid command: $1\n"
+    exit 1
+fi
+
+
