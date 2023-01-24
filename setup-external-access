@@ -13,9 +13,3 @@ if [[ -z "${NEG_NAME}" ]]; then
 else
   echo "Network endpoint group (NEG) previously provisioned."
 fi
-
-export TARGET_SERVICE=$(curl -X GET -H "$AUTH" "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
-
-
-# Check to see what environment groups are present.
-curl "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/envgroups/eval-group" -H "$AUTH"
