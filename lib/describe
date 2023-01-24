@@ -17,5 +17,5 @@ if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
     echo
     printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
     printf "${NO_COLOR}\n"
-    printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./test-internal-access \n"
+    printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./demo test-internal-access\n"
 fi
