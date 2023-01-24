@@ -8,23 +8,35 @@ of more or less complex installations and options.
 
 # Getting Started
 
-## Prepare settings
+## Prep the Enironment
+
+### Configure settings
 Open the [settings.json](settings.json) file and provide your project ID and network name.
 ```
 {
  "project": "apigee-123456",
- "network": "demo-net"
+ "network": "demo-net",
+ "region": "us-central1"
 }
 ```
-
+### Make the script executable
+```
+chmod +x demo
+```
 ## Create an Apigee Instance
 ```
-chmod +x create-apigee-instance
-./create-apigee-instance
+./demo create-apigee-instance
+```
+## Confirm new instance and show access details
+```
+./demo describe
+```
+## Test access to Apigee from inside the private network
+```
+./demo test-internal-access
 ```
 
-## Configure Public Internet Access
+# Configure Public Internet Access
 ```
-chmod +x setup-external-access
-./setup-external-access
+./demo setup-external-access
 ```
