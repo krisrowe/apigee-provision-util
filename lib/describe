@@ -10,9 +10,12 @@ printf "host name: ${HIGHLIGHT_COLOR}${APIGEE_HOST_NAME}${NO_COLOR}\n"
 printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${NO_COLOR}\n"
 printf "instance name: ${APIGEE_INSTANCE_NAME}\n"
 echo "**************************************"
-echo
-echo "Try the following from a machine instance inside the ${NETWORK_NAME} network of project ${PROJECT_ID}..."
-echo
-printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
-printf "${NO_COLOR}\n"
-printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./test-internal-access \n"
+
+if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
+    echo
+    echo "Try the following from a machine instance inside the ${NETWORK_NAME} network of project ${PROJECT_ID}..."
+    echo
+    printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
+    printf "${NO_COLOR}\n"
+    printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./test-internal-access \n"
+fi
