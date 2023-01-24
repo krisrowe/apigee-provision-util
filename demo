@@ -8,7 +8,7 @@ if [[ -z "$1" ]]; then
     exit 1
 fi
 
-set -e
+set -e # cause script to exit (stop) immediately if any one step fails
 
 # Note the directory where this main script resides.
 export REPO_DIRECTORY=$(dirname "$0")

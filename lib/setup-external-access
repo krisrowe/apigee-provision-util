@@ -1,7 +1,8 @@
-export TARGET_SERVICE=$(curl -X GET -H "$AUTH" "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
+DEFAULT_RESOURCE_NAME=apigee
+TARGET_SERVICE=$(curl -X GET -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r '.instances[0].serviceAttachment')
 
-export NEG_NAME=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:apigee")
-if [[ -z "${NEG_NAME}" ]]; then
+TEMP_CHECK=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:${DEFAULT_RESOURCE_NAME}")
+if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Provisioning NEG for PSC Target Service ${TARGET_SERVICE}." 
   gcloud compute network-endpoint-groups create apigee \
     --network-endpoint-type=private-service-connect \
@@ -13,3 +14,118 @@ if [[ -z "${NEG_NAME}" ]]; then
 else
   echo "Network endpoint group (NEG) previously provisioned."
 fi
+
+TEMP_CHECK=$(gcloud compute addresses list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Reserving an IP address for the load balancer."
+  gcloud compute addresses create $DEFAULT_RESOURCE_NAME \
+    --ip-version=IPV4 --global --project=$PROJECT_ID
+else
+  echo "External IP address previously reserved for load balancer."
+fi
+
+TEMP_CHECK=$(gcloud compute backend-services list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Creating a backend service for the load balancer."
+  gcloud compute backend-services create $DEFAULT_RESOURCE_NAME \
+    --load-balancing-scheme=EXTERNAL_MANAGED \
+    --protocol=HTTPS \
+    --global --project=$PROJECT_ID
+
+  # TODO: Instead of using try/catch with attempted cleanup, see if we
+  # can detect that the backend service was previously created without
+  # a backend so that we reduce the risk of leaving things in a state
+  # that is unrecoverable without simply running the script again.
+  {
+    gcloud compute backend-services add-backend $DEFAULT_RESOURCE_NAME \
+      --network-endpoint-group=$DEFAULT_RESOURCE_NAME \
+      --network-endpoint-group-region=$RUNTIME_LOCATION \
+      --global --project=$PROJECT_ID
+  } || {
+    # Ensure that the next time we run this script, we try again to add
+    # the backend NEG to the backend service by deleting the backend service
+    # and thus causing this to be reattempted.
+    echo "Deleting the backend service because we failed to attach backend."
+    gcloud compute backend-services delete $DEFAULT_RESOURCE_NAME
+    exit 1
+  }
+else
+  echo "Backend service previously created for the load balancer."
+fi
+
+TEMP_CHECK=$(gcloud compute url-maps list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Creating the load balancer frontend..."
+  gcloud compute url-maps create $DEFAULT_RESOURCE_NAME --default-service=$DEFAULT_RESOURCE_NAME --global --project=$PROJECT_ID 
+else
+  echo "Load balancer frontend previously created."
+fi
+
+APIGEE_HOST_NAME=34.160.112.252.nip.io
+
+TEMP_CHECK=$(gcloud compute ssl-certificates list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Provisioning SSL certificate..."
+  gcloud compute ssl-certificates create $DEFAULT_RESOURCE_NAME \
+    --domains $APIGEE_HOST_NAME --project=$PROJECT_ID
+  echo "Certificater provisioning can take up to an hour. Run this script again in a bit to see if it's done."
+  exit
+elif [[ "${TEMP_CHECK}" = "PROVISIONING" ]]; then
+  echo "SSL still provisioning. Try again later."
+else
+  echo "SSL certificate previously provisioned."
+fi
+
+# TODO: Optimize by checking prior configuration before changing.
+echo "Making sure domain name is property set on Apigee environment group..."
+curl -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/envgroups/eval-group" \
+  -H "$AUTH" \
+  -X PATCH \
+  -H "Content-Type:application/json" \
+  -d '{
+    "hostnames":["'${APIGEE_HOST_NAME}'"]
+  }' > /dev/null
+
+TEMP_CHECK=$(gcloud compute target-https-proxies list \
+  --filter="name=${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Creating the target HTTPS proxy..."
+  gcloud compute target-https-proxies create $DEFAULT_RESOURCE_NAME \
+    --url-map=$DEFAULT_RESOURCE_NAME \
+    --ssl-certificates=$DEFAULT_RESOURCE_NAME --project=$PROJECT_ID
+else
+  echo "Target HTTPS proxy previously created."
+fi
+
+TEMP_CHECK=$(gcloud compute forwarding-rules list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+if [[ -z "${TEMP_CHECK}" ]]; then
+  echo "Creating forwarding rule..."
+  gcloud compute forwarding-rules create $DEFAULT_RESOURCE_NAME \
+    --load-balancing-scheme=EXTERNAL_MANAGED \
+    --network-tier=PREMIUM \
+    --address=$DEFAULT_RESOURCE_NAME \
+    --target-https-proxy=$DEFAULT_RESOURCE_NAME \
+    --ports=443 \
+    --global --project=$PROJECT_ID
+else
+  echo "Forwarding rule previously created."
+fi
+
+echo "Attempting to invoke an API being managed by the Apigee instance..."
+TEMP_CMD="curl -s https://${APIGEE_HOST_NAME}/hello-world"
+printf "\n${EXAMPLE_COLOR}${TEMP_CMD}${NO_COLOR}\n\n"
+API_RESPONSE=$($TEMP_CMD)
+printf "API response: ${HIGHLIGHT_COLOR}${API_RESPONSE}${NO_COLOR}\n"
+
+#gcloud compute target-http-proxies create ${DEFAULT_RESOURCE_NAME}-http --url-map=$DEFAULT_RESOURCE_NAME
+#gcloud compute forwarding-rules create http-content-rule \
+#    --load-balancing-scheme=EXTERNAL_MANAGED \
+#    --address=${DEFAULT_RESOURCE_NAME} \
+#    --global \
+#    --target-http-proxy=${DEFAULT_RESOURCE_NAME}-http \
+#    --ports=80   
