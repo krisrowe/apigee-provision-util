@@ -29,5 +29,5 @@ gcloud config set project my-project
 
 # Configure Public Internet Access
 ```
-./demo setup-external-access --network=default
+./demo setup-external-access --network=default --domain={IP-ADDRESS}.nip.io
 ```
