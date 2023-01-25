@@ -1,8 +1,3 @@
-if [[ -z "${NETWORK_NAME}" ]]; then
-  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
-  exit 1
-fi
-
 printf "Removing ${HIGHLIGHT_COLOR}external${NO_COLOR} access...\n\n"
 
 echo "Checking details of the Apigee instance for project ${PROJECT_ID}..."

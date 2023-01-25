@@ -99,13 +99,14 @@ which will cause repeat execution to be quick, without having to wait on provisi
 ```
 ./demo test-internal-access --network=default --keep-instance
 ```
-# Configure Public Internet Access
-## Run this
+# Public Internet Access
+## Setup
+### Run this
 ```
 ./demo setup-external-access --network=default --domain={IP-ADDRESS}.nip.io
 ```
 **NOTE**: You can safely run the above script as many times as you want. It will detect what has already been done and do only what's necessary! 
-## Output
+### Output
 ```
 Setting up external access...
 
@@ -135,11 +136,11 @@ apigee  MANAGED  2023-01-25T07:26:59.696-08:00               PROVISIONING
     10.95.120.0.nip.io: PROVISIONING
 Certificate provisioning can take up to an hour. Run this script again in a bit to see if it's done.
 ```
-## Run this again after a bit
+### Run this again after a bit
 ```
 ./demo setup-external-access --network=default --domain={IP-ADDRESS}.nip.io
 ```
-## Output
+### Output
 ```
 Setting up external access...
 
@@ -167,4 +168,10 @@ Attempting to invoke an API being managed by the Apigee instance...
 curl -s https://34.111.49.82.nip.io/hello-world
 
 API response: Hello, Guest!
+```
+## Undo External Access Configuration/Provisioning
+This option could be handy if something goes so terribly wrong with the `setup-external-access` that it somehow cannot self-heal when run again, or if you just want to run that script again in full, for whatever reason, without skipping any steps that have previously been completed.
+### Run this
+```
+./demo undo-external-access
 ```
