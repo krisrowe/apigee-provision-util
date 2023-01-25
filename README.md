@@ -14,9 +14,11 @@ chmod +x demo
 ```
 ## Provision the Apigee Org/Instance
 ```
+# Avoid having to put --project on every command below.
 gcloud config set project my-project
+
+# Do the actual provisioning.
 ./demo provision --network=default --region=us-central1
- 
 ```
 ## Confirm new instance and show access details
 ```
