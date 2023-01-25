@@ -1,0 +1,84 @@
+if [[ -z "${NETWORK_NAME}" ]]; then
+  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
+  exit 1
+fi
+
+printf "Removing ${HIGHLIGHT_COLOR}external${NO_COLOR} access...\n\n"
+
+echo "Checking details of the Apigee instance for project ${PROJECT_ID}..."
+echo
+export SUPPRESS_DESCRIBE=true # Minimize console output. Mainly just set env vars.
+. $REPO_DIRECTORY/lib/describe # Query the Apigee API and set details to env vars.
+echo
+
+DEFAULT_RESOURCE_NAME=apigee
+
+TEMP_CHECK=$(gcloud compute forwarding-rules list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}Forwarding rule not found.${NO_COLOR}\n"
+else
+  echo "Deleting forwarding rule..."
+  gcloud compute forwarding-rules delete $DEFAULT_RESOURCE_NAME \
+    --global --project=$PROJECT_ID --quiet
+fi
+
+
+TEMP_CHECK=$(gcloud compute target-https-proxies list \
+  --filter="name=${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}Target HTTPS proxy not found.${NO_COLOR}\n"
+else
+  echo "Deleting the target HTTPS proxy..."
+  gcloud compute target-https-proxies delete $DEFAULT_RESOURCE_NAME --quiet --project=$PROJECT_ID
+fi
+
+
+TEMP_CHECK=$(gcloud compute ssl-certificates list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}SSL certificate not found.${NO_COLOR}\n"
+else
+  echo "Deleting SSL certificate..."
+  gcloud compute ssl-certificates delete $DEFAULT_RESOURCE_NAME --quiet --project=$PROJECT_ID
+fi
+
+
+TEMP_CHECK=$(gcloud compute url-maps list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}Load balancer frontend not found.${NO_COLOR}\n"
+else
+  echo "Deleting load balancer frontend..."
+  gcloud compute url-maps delete $DEFAULT_RESOURCE_NAME --global --quiet --project=$PROJECT_ID 
+fi
+
+TEMP_CHECK=$(gcloud compute backend-services list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+    printf "${WARN_COLOR}Load balancer backend service not found.${NO_COLOR}\n"
+else
+  echo "Deleting the backend service for the load balancer..."
+  gcloud compute backend-services delete $DEFAULT_RESOURCE_NAME --global --quiet --project=$PROJECT_ID
+fi
+
+APIGEE_LB_ADDR_NAME=apigee-lb
+TEMP_CHECK=$(gcloud compute addresses list \
+  --filter="name=${APIGEE_LB_ADDR_NAME}" --format="value(name)" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}External IP address for load balancer not found.${NO_COLOR}\n"
+else
+  echo "Deleting the IP address for the load balancer..."
+  gcloud compute addresses delete $APIGEE_LB_ADDR_NAME --global --quiet --project=$PROJECT_ID  
+fi
+
+TEMP_CHECK=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:${DEFAULT_RESOURCE_NAME}" 2> /dev/null)
+if [[ -z "${TEMP_CHECK}" ]]; then
+  printf "${WARN_COLOR}Network endpoint group (NEG) not found.${NO_COLOR}\n"
+else
+  printf "Deleting the NEG for PSC Target Service ${HIGHLIGHT_COLOR}${TARGET_SERVICE}${NO_COLOR}.\n" 
+  gcloud compute network-endpoint-groups delete $DEFAULT_RESOURCE_NAME \
+    --region=$APIGEE_INSTANCE_LOCATION \
+    --project=$PROJECT_ID --quiet
+fi
+

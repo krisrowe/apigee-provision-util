@@ -108,7 +108,11 @@ if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Certificate provisioning can take up to an hour. Run this script again in a bit to see if it's done."
   exit
 elif [[ "${TEMP_CHECK}" = "PROVISIONING" ]]; then
-  echo "SSL still provisioning. Try again later."
+  printf "${INFO_COLOR}SSL still provisioning. Try again later.${NO_COLOR}\n\n"
+  echo "Current status for certicate provisioning below"
+  echo "-----------------------------------------------"
+  gcloud compute ssl-certificates describe ${DEFAULT_RESOURCE_NAME} 
+  echo "-----------------------------------------------"
   exit
 else
   echo "SSL certificate previously provisioned."
