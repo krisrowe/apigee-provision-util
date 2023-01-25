@@ -1,6 +1,16 @@
+if [[ -z "${NETWORK_NAME}" ]]; then
+  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
+  exit 1
+fi
+if [[ -z "${APIGEE_INSTANCE_LOCATION}" ]]; then
+  printf "${ERROR_COLOR}Missing --location argument.${NO_COLOR}\n"
+  exit 1
+fi
+
+printf "Enabling Google APIs...\n"
 gcloud services enable apigee.googleapis.com \
   servicenetworking.googleapis.com compute.googleapis.com \
-  cloudkms.googleapis.com --project=$PROJECT_ID
+  cloudkms.googleapis.com --project=$PROJECT_ID 2> /dev/null
 
 export CONFIRM=$(gcloud alpha apigee organizations list --filter="name:${PROJECT_ID}" --format="value(name)")
 if [[ -z "${CONFIRM}" ]]; then
@@ -10,67 +20,62 @@ else
   exit
 fi
 
-export DEFAULT_LOCATION=$(gcloud config list compute/region --format=json | jq -r '.compute.region')
-if [[ -z "${DEFAULT_LOCATION}" ]]; then
-  printf "${ERROR_COLOR}Missing --location argument.${NO_COLOR}\n"
-  exit 1
-fi
-
-if [[ -z "${NETWORK_NAME}" ]]; then
-  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
-  exit 1
-fi
 export CONFIRM=$(gcloud compute networks list --project=$PROJECT_ID --format="value(name)" --filter="name:${NETWORK_NAME}")
 if [[ -z "${CONFIRM}" ]]; then
   echo "Provisioning a network."
-  gcloud compute networks create ${NETWORK_NAME} --project=$PROJECT_ID
+  gcloud compute networks create ${NETWORK_NAME} --project=$PROJECT_ID 2> /dev/null
 else
   echo "Network previously provisioned."
 fi
 
 export APIGEE_PEERING_RANGE=apigee-peering
-export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name=${APIGEE_PEERING_RANGE}")
+export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name=${APIGEE_PEERING_RANGE}" 2> /dev/null)
 if [[ -z "${CONFIRM}" ]]; then
-  echo "Provisioning a peering address range without specifying addresses. Use --addresses instead to specify."
+  echo "Provisioning a /22 peering address range..." # Use --addresses instead to specify addresses.
   gcloud compute addresses create $APIGEE_PEERING_RANGE \
     --global \
-    --prefix-length=21 \
+    --prefix-length=22 \
     --description="Peering range for Apigee services" \
     --network=$NETWORK_NAME \
     --purpose=VPC_PEERING \
-    --project=$PROJECT_ID
+    --project=$PROJECT_ID 2> /dev/null
 else
-  echo "Peering range previously reserved."
+  echo "The /22 peering range was previously reserved."
 fi
 
 
 export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name:google-managed-services-support-1")
 if [[ -z "${CONFIRM}" ]]; then
+  echo "Provisioning a /28 peering address range..."
   gcloud compute addresses create google-managed-services-support-1 \
     --global \
     --prefix-length=28 \
     --description="Peering range for supporting Apigee services" \
     --network=$NETWORK_NAME \
     --purpose=VPC_PEERING \
-    --project=$PROJECT_ID
+    --project=$PROJECT_ID 2> /dev/null
 else
-  echo "Support range previously created."
+  echo "The /28 peering range was previously reserved."
 fi
 
 export CONFIRM=$(gcloud services vpc-peerings list --network=$NETWORK_NAME --project=$PROJECT_ID --service=servicenetworking.googleapis.com --format="value(peering)")
 if [[ -z "${CONFIRM}" ]]; then
+  echo "Establishing VPC peering..."
   gcloud services vpc-peerings connect \
     --service=servicenetworking.googleapis.com \
     --network=$NETWORK_NAME \
     --ranges=$APIGEE_PEERING_RANGE,google-managed-services-support-1 \
-    --project=$PROJECT_ID
+    --project=$PROJECT_ID 2> /dev/null
 else
   echo "VPC peering previously established."
 fi
 
-echo "Creating a Apigee organization ${PROJECT_ID}..."
+printf "\n${INFO_COLOR}"
+printf "Creating an Apigee organization ${HIGHLIGHT_COLOR}${PROJECT_ID}${INFO_COLOR}:\n"
+printf -- "- location: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_LOCATION}${INFO_COLOR}\n"
+printf -- "- network: ${HIGHLIGHT_COLOR}${NETWORK_NAME}${NO_COLOR}\n\n"
 gcloud alpha apigee organizations provision \
-  --runtime-location=$DEFAULT_LOCATION \
-  --analytics-region=$DEFAULT_LOCATION \
+  --runtime-location=$APIGEE_INSTANCE_LOCATION \
+  --analytics-region=$APIGEE_INSTANCE_LOCATION \
   --authorized-network=$NETWORK_NAME \
-  --project=$PROJECT_ID
+  --project=$PROJECT_ID --async

@@ -1,9 +1,9 @@
-export HIGHLIGHT_COLOR='\033[0;31m'
+export HIGHLIGHT_COLOR='\033[1;33m'
 export EXAMPLE_COLOR='\033[1;32m'
 export NO_COLOR='\033[0m'
 export ERROR_COLOR='\033[1;31m'
 export WARN_COLOR='\033[0;33m'
-export INFO_COLOR='\033[0;36m'
+export INFO_COLOR='\033[1;34m'
 
 if [[ -z "$1" ]]; then
     printf "${ERROR_COLOR}No command argument. Expected: ${EXAMPLE_COLOR}demo [command]\n"
@@ -14,7 +14,12 @@ set -e # cause script to exit (stop) immediately if any one step fails
 
 # Note the directory where this main script resides.
 export REPO_DIRECTORY=$(dirname "$0")
+# Clear environment variables with common names that may be set outside
+# the script to avoid unexpectedly treating them as direct arguments.
+unset PROJECT_ID  
+unset NETWORK_NAME
 
+# Read command-line switches and populate local variables.
 for var in "$@"
 do
   case "$var" in
