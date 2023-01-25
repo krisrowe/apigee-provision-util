@@ -10,6 +10,7 @@ TEMP_CHECK=$(gcloud compute firewall-rules list \
     --filter="name:${SSH_RULE_NAME}" \
     --format="value(name)" --project=${PROJECT_ID})
 if [[ -z "${TEMP_CHECK}" ]]; then
+    echo "Ensuring firewall supports SSH..."
     gcloud compute firewall-rules create ${SSH_RULE_NAME} --project=${PROJECT_ID} \
         --network=${NETWORK_NAME} \
         --description="Allows TCP connections from any source to any instance on the network using port 22." \
@@ -17,12 +18,13 @@ if [[ -z "${TEMP_CHECK}" ]]; then
         --source-ranges=0.0.0.0/0 --action=ALLOW --rules=tcp:22
 fi
 
+echo
 export SUPPRESS_DESCRIBE=true # Minimize console output. Mainly just set env vars.
 . $REPO_DIRECTORY/lib/describe # Query the Apigee API and set details to env vars.
 echo
 
 TEMP_INSTANCE=temp-demo-apigee-client-instance
-TEMP_CHECK=$(gcloud compute instances list --project=${PROJECT_ID} --filter="name:$TEMP_INSTANCE" --format="value(status)")
+TEMP_CHECK=$(gcloud compute instances list --project=${PROJECT_ID} --filter="name:$TEMP_INSTANCE" --format="value(status)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
     echo "Creating temporary instance inside the VPC as a test client..."
     # Temporarily create a VM inside the private network from which to invoke Apigee.
@@ -30,7 +32,7 @@ if [[ -z "${TEMP_CHECK}" ]]; then
     # the argument --shielded-secure-boot avoids error for violation of constraints/compute.requireShieldedVm
     gcloud compute instances create ${TEMP_INSTANCE} \
         --project=${PROJECT_ID} --zone=us-central1-a --network=${NETWORK_NAME} \
-        --no-address --shielded-secure-boot --quiet
+        --no-address --shielded-secure-boot --quiet 2> /dev/null
     # The instance will show RUNNING status immediately after the above
     # command returns complete, but it still takes some time before an
     # attempt to connect via SSH is successful.   
@@ -50,12 +52,13 @@ fi
     # Run a command on the instance to invoke an API in Apigee.
     API_RESPONSE=$(gcloud compute ssh ${TEMP_INSTANCE} --project=${PROJECT_ID} \
         --zone=us-central1-a --tunnel-through-iap --strict-host-key-checking=no \
-        --command="curl -k -H \"Host: ${APIGEE_HOST_NAME}\" -s \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"" 2> /dev/null)
+        --command="curl -k -H \"Host: ${APIGEE_HOST_NAME}\" -s \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"" 2> demo.log)
     # Show API response.
     printf "\n${INFO_COLOR}API response as the output of above curl command: ${HIGHLIGHT_COLOR}${API_RESPONSE}${NO_COLOR}\n"
     if [ "$API_RESPONSE" = "Hello, Guest!" ]; then
         printf "${INFO_COLOR}Test result: ${HIGHLIGHT_COLOR}success${NO_COLOR}\n\n"
     else
+        cat demo.log
         printf "Test result: ${ERROR_COLOR}failure${NO_COLOR}\n"
     fi
 } || {
