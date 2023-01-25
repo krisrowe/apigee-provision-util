@@ -99,26 +99,17 @@ else
   fi
 fi
 
-TEMP_CHECK=$(gcloud compute ssl-certificates list \
+APIGEE_CERT_STATUS=$(gcloud compute ssl-certificates list \
   --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)" 2> /dev/null)
-if [[ -z "${TEMP_CHECK}" ]]; then
+if [[ -z "${APIGEE_CERT_STATUS}" ]]; then
   echo "Provisioning SSL certificate..."
   gcloud compute ssl-certificates create $DEFAULT_RESOURCE_NAME \
     --domains $APIGEE_HOST_NAME --project=$PROJECT_ID
   echo "Certificate provisioning can take up to an hour. Run this script again in a bit to see if it's done."
   exit
-elif [[ "${TEMP_CHECK}" = "PROVISIONING" ]]; then
-  printf "${INFO_COLOR}SSL still provisioning. Try again later.${NO_COLOR}\n\n"
-  echo "Current status for certicate provisioning below"
-  echo "-----------------------------------------------"
-  gcloud compute ssl-certificates describe ${DEFAULT_RESOURCE_NAME} 
-  echo "-----------------------------------------------"
-  exit
-else
+elif [[ "${APIGEE_CERT_STATUS}" != "PROVISIONING" ]]; then
   echo "SSL certificate previously provisioned."
 fi
-
-
 
 TEMP_CHECK=$(gcloud compute target-https-proxies list \
   --filter="name=${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
@@ -144,6 +135,16 @@ if [[ -z "${TEMP_CHECK}" ]]; then
     --global --project=$PROJECT_ID
 else
   echo "Forwarding rule previously created."
+fi
+
+
+if [[ "${APIGEE_CERT_STATUS}" = "PROVISIONING" ]]; then
+  printf "${INFO_COLOR}SSL still provisioning. Try again later.${NO_COLOR}\n\n"
+  echo "Current status for certicate provisioning below"
+  echo "-----------------------------------------------"
+  gcloud compute ssl-certificates describe ${DEFAULT_RESOURCE_NAME} 
+  echo "-----------------------------------------------"
+  exit
 fi
 
 echo "Attempting to invoke an API being managed by the Apigee instance..."
