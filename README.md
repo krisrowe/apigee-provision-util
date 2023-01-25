@@ -1,26 +1,30 @@
 # Purpose
-
-Follow the steps in this document, which leverage the scripts in this repo,
-to set up an Apigee X instance on Google Cloud for demonstration purposes. 
-
-The steps are broken up into a few different scripts to allow for a variety
-of more or less complex installations and options.
+This super quick-and-easy, lightweight utility lets you:
+1. Create an Apigee org/instance with a *single command*
+   * even in a completely empty GCP project! 
+2. Show the following for any Apigee org/instance with a *single command*
+   * connection info (e.g. IP, host, etc.)
+   * curl syntax for the *end-client* of a *working* API call 
+3. Test invocation of an Apigee API proxy from *inside* the private network, with a *single command*
+4. Set up public internet access to an existing Apigee org/instance 
 
 # Getting Started
 
-This utility is 100% pure shell script, so all you need to do is clone this repo and run it! 
+This utility is 100% pure shell script, so all you need to do is clone this repo and run the steps below! 
 
 ## Make the script executable
 ```
 chmod +x demo
 ```
+## Define a project/org context (OPTIONAL)
+Avoid having to put `--project` on every command to this utility.
+```
+gcloud config set project my-project
+```
+
 ## Provision the Apigee Org/Instance
 ### Run this
 ```
-# Avoid having to put --project on every command below.
-gcloud config set project my-project
-
-# Do the actual provisioning.
 ./demo provision --network=default --region=us-central1
 ```
 **NOTE**: You can safely run the above script as many times as you want. It will detect what has already been done and do only what's necessary! 
@@ -40,7 +44,7 @@ Creating an Apigee organization my-org:
 
 **NOTE:** The above kicks-off a long-running process of which you'll have to track the completion before proceeding to other commands.
 
-## Confirm new instance and show access details
+## Show org/instance client access details/example
 ### Run this
 ```
 ./demo describe
