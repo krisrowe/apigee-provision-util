@@ -1,23 +1,38 @@
-set -e
-
 gcloud services enable apigee.googleapis.com \
   servicenetworking.googleapis.com compute.googleapis.com \
   cloudkms.googleapis.com --project=$PROJECT_ID
 
-export RANGE_NAME=google-svcs
+export CONFIRM=$(gcloud alpha apigee organizations list --filter="name:${PROJECT_ID}" --format="value(name)")
+if [[ -z "${CONFIRM}" ]]; then
+  echo "Confirmed no Apigee organization exists for project ${PROJECT_ID}."
+else
+  printf "${WARN_COLOR}Apigee organization already exists for project ${PROJECT_ID}."
+  exit
+fi
 
+export DEFAULT_LOCATION=$(gcloud config list compute/region --format=json | jq -r '.compute.region')
+if [[ -z "${DEFAULT_LOCATION}" ]]; then
+  printf "${ERROR_COLOR}Missing --location argument.${NO_COLOR}\n"
+  exit 1
+fi
+
+if [[ -z "${NETWORK_NAME}" ]]; then
+  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
+  exit 1
+fi
 export CONFIRM=$(gcloud compute networks list --project=$PROJECT_ID --format="value(name)" --filter="name:${NETWORK_NAME}")
 if [[ -z "${CONFIRM}" ]]; then
   echo "Provisioning a network."
-  gcloud compute networks create demonet --project=$PROJECT_ID
+  gcloud compute networks create ${NETWORK_NAME} --project=$PROJECT_ID
 else
   echo "Network previously provisioned."
 fi
 
-export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name:${RANGE_NAME}")
+export APIGEE_PEERING_RANGE=apigee-peering
+export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name=${APIGEE_PEERING_RANGE}")
 if [[ -z "${CONFIRM}" ]]; then
   echo "Provisioning a peering address range without specifying addresses. Use --addresses instead to specify."
-  gcloud compute addresses create $RANGE_NAME \
+  gcloud compute addresses create $APIGEE_PEERING_RANGE \
     --global \
     --prefix-length=21 \
     --description="Peering range for Apigee services" \
@@ -47,19 +62,15 @@ if [[ -z "${CONFIRM}" ]]; then
   gcloud services vpc-peerings connect \
     --service=servicenetworking.googleapis.com \
     --network=$NETWORK_NAME \
-    --ranges=$RANGE_NAME,google-managed-services-support-1 \
+    --ranges=$APIGEE_PEERING_RANGE,google-managed-services-support-1 \
     --project=$PROJECT_ID
 else
   echo "VPC peering previously established."
 fi
 
-export CONFIRM=$(gcloud alpha apigee organizations list --filter="name:${PROJECT_ID}" --format="value(name)")
-if [[ -z "${CONFIRM}" ]]; then
-  gcloud alpha apigee organizations provision \
-    --runtime-location=$RUNTIME_LOCATION \
-    --analytics-region=$ANALYTICS_REGION \
-    --authorized-network=$NETWORK_NAME \
-    --project=$PROJECT_ID
-else
-  echo "Apigee organization previously provisioned."
-fi
+echo "Creating a Apigee organization ${PROJECT_ID}..."
+gcloud alpha apigee organizations provision \
+  --runtime-location=$DEFAULT_LOCATION \
+  --analytics-region=$DEFAULT_LOCATION \
+  --authorized-network=$NETWORK_NAME \
+  --project=$PROJECT_ID

@@ -1,27 +1,27 @@
+if [[ -z "${NETWORK_NAME}" ]]; then
+  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
+  exit 1
+fi
+
 printf "Testing ${HIGHLIGHT_COLOR}internal${NO_COLOR} access...\n"
 
-SSH_RULE_NAME=default-allow-ssh
+SSH_RULE_NAME=${NETWORK_NAME}-allow-ssh
 TEMP_CHECK=$(gcloud compute firewall-rules list \
-    --filter="name:${SSH_RULE_NAME} AND network:${NETWORK_NAME}" \
-    --format="value(name)")
+    --filter="name:${SSH_RULE_NAME}" \
+    --format="value(name)" --project=${PROJECT_ID})
 if [[ -z "${TEMP_CHECK}" ]]; then
     gcloud compute firewall-rules create ${SSH_RULE_NAME} --project=${PROJECT_ID} \
-        --network=projects/${PROJECT_ID}/global/networks/${NETWORK_NAME} \
+        --network=${NETWORK_NAME} \
         --description="Allows TCP connections from any source to any instance on the network using port 22." \
         --direction=INGRESS --priority=65534 \
         --source-ranges=0.0.0.0/0 --action=ALLOW --rules=tcp:22
-else
-    echo "Firewall rule to allow SSH already established."
 fi
 
-echo "Querying the Apigee instance for project ${PROJECT_ID} for details..."
-echo
 export SUPPRESS_DESCRIBE=true # Minimize console output. Mainly just set env vars.
 . $REPO_DIRECTORY/lib/describe # Query the Apigee API and set details to env vars.
 echo
 
 TEMP_INSTANCE=temp-demo-apigee-client-instance
-echo "Checking to see if temp instance '$TEMP_INSTANCE' has already been created."
 TEMP_CHECK=$(gcloud compute instances list --project=${PROJECT_ID} --filter="name:$TEMP_INSTANCE" --format="value(status)")
 if [[ -z "${TEMP_CHECK}" ]]; then
     echo "Creating temporary instance inside the VPC as a test client..."
@@ -34,23 +34,27 @@ if [[ -z "${TEMP_CHECK}" ]]; then
     # The instance will show RUNNING status immediately after the above
     # command returns complete, but it still takes some time before an
     # attempt to connect via SSH is successful.   
+    echo "Giving some time for the new compute instance to become available for SSH..."
     sleep 30 # Total hack, for now.
+elif [[ "${TEMP_CHECK}" = "RUNNING" ]]; then
+    echo "Test client compute instance FOUND with status RUNNING."
 else
-    echo "Instance found. Status: $TEMP_CHECK"
+    printf "${ERROR_COLOR}Test client compuete instance has an unexpected status: ${HIGHLIGHT_COLOR}${TEMP_CHECK}${NO_COLOR}\n"
+    exit 1
 fi
 
 {
-    echo "Running the following command from the temporary instance inside the VPC."
-    printf "\n${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n\n${NO_COLOR}"
+    printf "\n${INFO_COLOR}Running the following command from the temporary instance inside the VPC.${NO_COLOR}\n"
+    printf "\n${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n${NO_COLOR}"
 
     # Run a command on the instance to invoke an API in Apigee.
     API_RESPONSE=$(gcloud compute ssh ${TEMP_INSTANCE} --project=${PROJECT_ID} \
         --zone=us-central1-a --tunnel-through-iap --strict-host-key-checking=no \
-        --command="curl -k -H \"Host: ${APIGEE_HOST_NAME}\" -s \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"")
+        --command="curl -k -H \"Host: ${APIGEE_HOST_NAME}\" -s \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"" 2> /dev/null)
     # Show API response.
-    printf "\nAPI response as the output of above curl command: ${HIGHLIGHT_COLOR}${API_RESPONSE}${NO_COLOR}\n"
+    printf "\n${INFO_COLOR}API response as the output of above curl command: ${HIGHLIGHT_COLOR}${API_RESPONSE}${NO_COLOR}\n"
     if [ "$API_RESPONSE" = "Hello, Guest!" ]; then
-        printf "Test result: ${HIGHLIGHT_COLOR}success${NO_COLOR}\n"
+        printf "${INFO_COLOR}Test result: ${HIGHLIGHT_COLOR}success${NO_COLOR}\n\n"
     else
         printf "Test result: ${ERROR_COLOR}failure${NO_COLOR}\n"
     fi
@@ -63,4 +67,9 @@ fi
 }
 
 # Delete the temporary instance.
-gcloud compute instances delete ${TEMP_INSTANCE} --project=${PROJECT_ID} --quiet
+if [[ $* == *--keep-instance ]]; then
+    echo "Keeping temporary client instance for quick re-execution."
+else 
+    echo "Cleaning up..."
+    gcloud compute instances delete ${TEMP_INSTANCE} --project=${PROJECT_ID} --quiet
+fi

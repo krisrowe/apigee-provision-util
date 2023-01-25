@@ -8,24 +8,15 @@ of more or less complex installations and options.
 
 # Getting Started
 
-## Prep the Enironment
-
-### Configure settings
-Open the [settings.json](settings.json) file and provide your project ID and network name.
-```
-{
- "project": "apigee-123456",
- "network": "demo-net",
- "region": "us-central1"
-}
-```
-### Make the script executable
+## Make the script executable
 ```
 chmod +x demo
 ```
-## Create an Apigee Instance
+## Provision the Apigee Org/Instance
 ```
-./demo create-apigee-instance
+gcloud config set project my-project
+./demo provision --network=default --region=us-central1
+ 
 ```
 ## Confirm new instance and show access details
 ```
@@ -33,10 +24,10 @@ chmod +x demo
 ```
 ## Test access to Apigee from inside the private network
 ```
-./demo test-internal-access
+./demo test-internal-access --network=default
 ```
 
 # Configure Public Internet Access
 ```
-./demo setup-external-access
+./demo setup-external-access --network=default
 ```

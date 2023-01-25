@@ -1,19 +1,28 @@
 export APIGEE_INSTANCE_JSON=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r ".instances[0]")
+if [[ -z "$APIGEE_INSTANCE_JSON" || "$APIGEE_INSTANCE_JSON" = null ]]; then
+    printf "${ERROR_COLOR}Project ${HIGHLIGHT_COLOR}${PROJECT_ID}${ERROR_COLOR} does not have an Apigee instance.\n${NO_COLOR}"
+    exit 1
+fi
 export APIGEE_INSTANCE_NAME=$(echo $APIGEE_INSTANCE_JSON | jq -r ".name")
 export APIGEE_INSTANCE_HOST_IP=$(echo $APIGEE_INSTANCE_JSON | jq -r ".host")
+export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location")
+export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.instances[0].serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
 
-echo "**************************************"
-echo "*****     APIGEE ORG DETAILS     *****"
-echo "**************************************"
-printf "host name: ${HIGHLIGHT_COLOR}${APIGEE_HOST_NAME}${NO_COLOR}\n"
-printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${NO_COLOR}\n"
-printf "instance name: ${APIGEE_INSTANCE_NAME}\n"
-echo "**************************************"
+printf "${INFO_COLOR}"
+printf "*******************************************\n"
+printf "*****     APIGEE INSTANCE DETAILS     *****\n"
+printf "*******************************************\n"
+printf "org: ${HIGHLIGHT_COLOR}${PROJECT_ID}${INFO_COLOR}\n"
+printf "host name: ${HIGHLIGHT_COLOR}${APIGEE_HOST_NAME}${INFO_COLOR}\n"
+printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${INFO_COLOR}\n"
+printf "location: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_LOCATION}${INFO_COLOR}\n"
+printf "*******************************************\n"
+printf "${NO_COLOR}"
 
 if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
     echo
-    echo "Try the following from a machine instance inside the ${NETWORK_NAME} network of project ${PROJECT_ID}..."
+    echo "Try the following from a machine instance inside project ${PROJECT_ID}..."
     echo
     printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
     printf "${NO_COLOR}\n"

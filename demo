@@ -1,7 +1,9 @@
 export HIGHLIGHT_COLOR='\033[0;31m'
-export EXAMPLE_COLOR='\033[0;36m'
+export EXAMPLE_COLOR='\033[1;32m'
 export NO_COLOR='\033[0m'
 export ERROR_COLOR='\033[1;31m'
+export WARN_COLOR='\033[0;33m'
+export INFO_COLOR='\033[0;36m'
 
 if [[ -z "$1" ]]; then
     printf "${ERROR_COLOR}No command argument. Expected: ${EXAMPLE_COLOR}demo [command]\n"
@@ -13,52 +15,33 @@ set -e # cause script to exit (stop) immediately if any one step fails
 # Note the directory where this main script resides.
 export REPO_DIRECTORY=$(dirname "$0")
 
-SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.project')
-if [[ -z "${SETTING_FOUND}" ]]; then
+for var in "$@"
+do
+  case "$var" in
+    --network=*)
+      export NETWORK_NAME="${var#*=}"
+      ;;
+    --project=*)
+      PROJECT_ID="${var#*=}"
+      ;;
+    --location=*)
+      APIGEE_INSTANCE_LOCATION="${var#*=}"
+      ;;  
+    --domain=*)
+      NEW_APIGEE_HOST_NAME="${var#*=}"
+      ;;   
+  esac
+done
+
+if [[ -z "${PROJECT_ID}" ]]; then
+  export PROJECT_ID=$(gcloud config get project)
   if [[ -z "${PROJECT_ID}" ]]; then
-    echo "Must set PROJECT_ID environment variable first."
+    printf "${ERROR_COLOR}Missing --project argument.${NO_COLOR}\n"
     exit 1
   fi
-  echo "Using PROJECT_ID environment variable."
-else 
-  # Overwrite the environment variable with what was found in settings.
-  PROJECT_ID=${SETTING_FOUND}
-  echo "Using project ID ${PROJECT_ID} as per settings."
-fi
-
-SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.network')
-if [[ -z "${SETTING_FOUND}" ]]; then
-  if [[ -z "${NETWORK_NAME}" ]]; then
-    NETWORK_NAME=default
-    echo "Using ${NETWORK_NAME} network by default."
-  else 
-    echo "Using ${NETWORK_NAME} network as per NETWORK_NAME environment variable."
-  fi
-else 
-  # Overwrite the environment variable with what was found in settings.
-  NETWORK_NAME=$SETTING_FOUND
-  echo "Using ${NETWORK_NAME} network as per settings."
-fi
-
-SETTING_FOUND=$(cat ${REPO_DIRECTORY}/settings.json | jq -r '.region')
-if [[ -z "${SETTING_FOUND}" ]]; then
-  if [[ -z "${REGION}" ]]; then
-    RUNTIME_LOCATION=us-central1
-    echo "Using ${RUNTIME_LOCATION} region by default."
-  else 
-    RUNTIME_LOCATION=$REGION
-    echo "Using ${RUNTIME_LOCATION} region as per REGION environment variable."
-  fi
-else 
-  # Overwrite the environment variable with what was found in settings.
-  RUNTIME_LOCATION=$SETTING_FOUND
-  echo "Using ${RUNTIME_LOCATION} region as per settings."
 fi
 
 export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
-export ANALYTICS_REGION=$RUNTIME_LOCATION
-
-echo
 
 # Run the command specified by the user.
 # Apply a regex validation to avoid unsafe script/command execution.
@@ -74,5 +57,3 @@ else
     printf "${ERROR_COLOR}Invalid command: $1\n"
     exit 1
 fi
-
-
