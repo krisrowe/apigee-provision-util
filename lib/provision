@@ -22,7 +22,7 @@ fi
 
 export CONFIRM=$(gcloud compute networks list --project=$PROJECT_ID --format="value(name)" --filter="name:${NETWORK_NAME}")
 if [[ -z "${CONFIRM}" ]]; then
-  echo "Provisioning a network."
+  echo "Provisioning a network..."
   gcloud compute networks create ${NETWORK_NAME} --project=$PROJECT_ID 2> /dev/null
 else
   echo "Network previously provisioned."

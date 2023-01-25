@@ -6,7 +6,7 @@ fi
 export APIGEE_INSTANCE_NAME=$(echo $APIGEE_INSTANCE_JSON | jq -r ".name")
 export APIGEE_INSTANCE_HOST_IP=$(echo $APIGEE_INSTANCE_JSON | jq -r ".host")
 export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location")
-export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.instances[0].serviceAttachment')
+export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
 
 printf "${INFO_COLOR}"

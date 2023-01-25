@@ -13,7 +13,7 @@ echo
 
 DEFAULT_RESOURCE_NAME=apigee
 
-TEMP_CHECK=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:${DEFAULT_RESOURCE_NAME}")
+TEMP_CHECK=$(gcloud compute network-endpoint-groups list --project=$PROJECT_ID --format="value(NAME)" --filter="name:${DEFAULT_RESOURCE_NAME}" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Provisioning NEG for PSC Target Service ${TARGET_SERVICE}." 
   gcloud compute network-endpoint-groups create $DEFAULT_RESOURCE_NAME \
@@ -27,21 +27,22 @@ else
   echo "Network endpoint group (NEG) previously provisioned."
 fi
 
+APIGEE_LB_ADDR_NAME=apigee-lb
 TEMP_CHECK=$(gcloud compute addresses list \
-  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+  --filter="name=${APIGEE_LB_ADDR_NAME}" --format="value(name)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Reserving an IP address for the load balancer."
-  gcloud compute addresses create $DEFAULT_RESOURCE_NAME \
+  gcloud compute addresses create $APIGEE_LB_ADDR_NAME \
     --ip-version=IPV4 --global --project=$PROJECT_ID
 else
-  echo "External IP address previously reserved for load balancer."
+  echo "External IP address previously reserved for load balancer as ${TEMP_CHECK}."
 fi
-APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$DEFAULT_RESOURCE_NAME" \
+APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
     --global --project=$PROJECT_ID --format="value(address)")
 printf "${INFO_COLOR}Load balancer IP address: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${NO_COLOR}\n"
 
 TEMP_CHECK=$(gcloud compute backend-services list \
-  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Creating a backend service for the load balancer."
   gcloud compute backend-services create $DEFAULT_RESOURCE_NAME \
@@ -71,7 +72,7 @@ else
 fi
 
 TEMP_CHECK=$(gcloud compute url-maps list \
-  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Creating the load balancer frontend..."
   gcloud compute url-maps create $DEFAULT_RESOURCE_NAME --default-service=$DEFAULT_RESOURCE_NAME --global --project=$PROJECT_ID 
@@ -92,22 +93,23 @@ else
       -X PATCH \
       -H "Content-Type:application/json" \
       -d '{
-        "hostnames":["'${APIGEE_HOST_NAME}'"]
-      }' > /dev/null
+        "hostnames":["'${NEW_APIGEE_HOST_NAME}'"]
+      }'
     APIGEE_HOST_NAME=$NEW_APIGEE_HOST_NAME
   fi
 fi
 
 TEMP_CHECK=$(gcloud compute ssl-certificates list \
-  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)")
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Provisioning SSL certificate..."
   gcloud compute ssl-certificates create $DEFAULT_RESOURCE_NAME \
     --domains $APIGEE_HOST_NAME --project=$PROJECT_ID
-  echo "Certificater provisioning can take up to an hour. Run this script again in a bit to see if it's done."
+  echo "Certificate provisioning can take up to an hour. Run this script again in a bit to see if it's done."
   exit
 elif [[ "${TEMP_CHECK}" = "PROVISIONING" ]]; then
   echo "SSL still provisioning. Try again later."
+  exit
 else
   echo "SSL certificate previously provisioned."
 fi
@@ -115,7 +117,7 @@ fi
 
 
 TEMP_CHECK=$(gcloud compute target-https-proxies list \
-  --filter="name=${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+  --filter="name=${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Creating the target HTTPS proxy..."
   gcloud compute target-https-proxies create $DEFAULT_RESOURCE_NAME \
@@ -126,13 +128,13 @@ else
 fi
 
 TEMP_CHECK=$(gcloud compute forwarding-rules list \
-  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)")
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
 if [[ -z "${TEMP_CHECK}" ]]; then
   echo "Creating forwarding rule..."
   gcloud compute forwarding-rules create $DEFAULT_RESOURCE_NAME \
     --load-balancing-scheme=EXTERNAL_MANAGED \
     --network-tier=PREMIUM \
-    --address=$DEFAULT_RESOURCE_NAME \
+    --address=$APIGEE_LB_ADDR_NAME \
     --target-https-proxy=$DEFAULT_RESOURCE_NAME \
     --ports=443 \
     --global --project=$PROJECT_ID
