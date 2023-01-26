@@ -1,5 +1,5 @@
 if [[ -z "$APIGEE_INSTANCE_JSON" || "$APIGEE_INSTANCE_JSON" = null ]]; then
-    printf "${ERROR_COLOR}Project ${HIGHLIGHT_COLOR}${PROJECT_ID}${ERROR_COLOR} does not have an Apigee instance.\n${NO_COLOR}"
+    printf "${ERROR_COLOR}Project ${HIGHLIGHT_COLOR}${PROJECT_ID}${ERROR_COLOR} does not have an Apigee instance or access is denied.\n${NO_COLOR}"
     exit 1
 fi
 
@@ -8,6 +8,7 @@ export APIGEE_INSTANCE_HOST_IP=$(echo $APIGEE_INSTANCE_JSON | jq -r ".host")
 export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location")
 export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
+export PENDING_PROCESS=$(gcloud beta apigee operations list --organization=${PROJECT_ID} --filter="STATE=IN_PROGRESS" --format="value(UUID)")
 
 export DEFAULT_RESOURCE_NAME=apigee
 export APIGEE_LB_ADDR_NAME=apigee-lb
@@ -30,7 +31,11 @@ printf "certificate status: ${HIGHLIGHT_COLOR}${APIGEE_CERT_STATUS}${INFO_COLOR}
 printf -- "-------------------------------------------\n"
 printf "${NO_COLOR}"
 
-
+if ! [[ -z "$PENDING_PROCESS" ]]; then
+    printf "${WARN_COLOR}Provisioning is still in process for this organization. Please wait. Run the command below to track status.${NO_COLOR}\n"
+    printf "${EXAMPLE_COLOR}gcloud beta apigee operations list --organization=roweapi2301b --filter=\"UUID=${PENDING_PROCESS}\"${NO_COLOR}\n"
+    exit
+fi
 
 if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
     printf "${INFO_COLOR}\n"

@@ -16,7 +16,8 @@ export CONFIRM=$(gcloud alpha apigee organizations list --filter="name:${PROJECT
 if [[ -z "${CONFIRM}" ]]; then
   echo "Confirmed no Apigee organization exists for project ${PROJECT_ID}."
 else
-  printf "${WARN_COLOR}Apigee organization already exists for project ${PROJECT_ID}."
+  printf "${WARN_COLOR}Apigee organization already exists for project ${PROJECT_ID}.\n"
+  printf "${INFO_COLOR}Try running this: ${EXAMPLE_COLOR}./demo describe${NO_COLOR}\n"
   exit
 fi
 
@@ -77,4 +78,7 @@ gcloud alpha apigee organizations provision \
   --runtime-location=$APIGEE_INSTANCE_LOCATION \
   --analytics-region=$APIGEE_INSTANCE_LOCATION \
   --authorized-network=$NETWORK_NAME \
-  --project=$PROJECT_ID --async
+  --project=$PROJECT_ID --async 2> demo.log
+
+printf "\n${INFO_COLOR}Just kicked-off a long-running process asynchronously. Track completion using the command below.\n"
+printf "${EXAMPLE_COLOR}gcloud beta apigee operations list --organization=${PROJECT_ID}${NO_COLOR}\n"
