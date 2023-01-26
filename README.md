@@ -19,7 +19,7 @@ chmod +x demo
 ## Define a project/org context (OPTIONAL)
 Avoid having to put `--project` on every command to this utility.
 ```
-gcloud config set project my-project
+gcloud config set project my-project-id
 ```
 
 ## Provision the Apigee Org/Instance
@@ -31,13 +31,13 @@ gcloud config set project my-project
 ### Output
 ```
 Enabling Google APIs...
-Confirmed no Apigee organization exists for project my-org.
+Confirmed no Apigee organization exists for project my-project-id.
 Provisioning a network...
 Provisioning a /22 peering address range...
 Provisioning a /28 peering address range...
 Establishing VPC peering...
 
-Creating an Apigee organization my-org:
+Creating an Apigee organization my-project-id:
 - location: us-central1
 - network: default
 ```
@@ -53,7 +53,7 @@ Creating an Apigee organization my-org:
 ```
 APIGEE INSTANCE DETAILS
 -------------------------------------------
-org: my-org
+org: my-project-id
 host name: 34.111.49.82.nip.io
 instance ip: 10.95.120.2
 location: us-central1
@@ -64,7 +64,7 @@ certificate status: PROVISIONING
 
 INTERNAL ACCESS
 -------------------------------------------
-Try the following from a machine instance inside project my-org on the default network...
+Try the following from a machine instance inside project my-project-id on the default network...
 
 curl -k -H "Host: 34.111.49.82.nip.io" "https://10.95.120.2/hello-world"
 
@@ -89,8 +89,8 @@ Testing internal access...
 *******************************************
 *****     APIGEE INSTANCE DETAILS     *****
 *******************************************
-org: my-org
-host name: my-org-eval.apigee.net
+org: my-project-id
+host name: my-project-id-eval.apigee.net
 instance ip: 10.95.120.2
 location: us-central1
 *******************************************
@@ -100,7 +100,7 @@ Giving some time for the new compute instance to become available for SSH...
 
 Running the following command from the temporary instance inside the VPC.
 
-curl -k -H "Host: my-org-eval.apigee.net" "https://10.95.120.2/hello-world"
+curl -k -H "Host: my-project-id-eval.apigee.net" "https://10.95.120.2/hello-world"
 
 API response as the output of above curl command: Hello, Guest!
 Test result: success
@@ -124,27 +124,27 @@ which will cause repeat execution to be quick, without having to wait on provisi
 ```
 Setting up external access...
 
-Checking details of the Apigee instance for project roweapi2301...
+Checking details of the Apigee instance for project my-project-id...
 
 *******************************************
 *****     APIGEE INSTANCE DETAILS     *****
 *******************************************
-org: my-org
-host name: my-org-eval.apigee.net
+org: my-project-id
+host name: my-project-id-eval.apigee.net
 instance ip: 10.95.120.2
 location: us-central1
 *******************************************
 
 Provisioning NEG for PSC Target Service projects/la688d507488e3f3ap-tp/regions/us-central1/serviceAttachments/apigee-us-central1-sqx0.
-Created [https://www.googleapis.com/compute/v1/projects/my-org/regions/us-central1/networkEndpointGroups/apigee].
+Created [https://www.googleapis.com/compute/v1/projects/my-project-id/regions/us-central1/networkEndpointGroups/apigee].
 Created network endpoint group [apigee].
 External IP address previously reserved for load balancer.
 Load balancer IP address: 10.95.120.0
 Creating a backend service for the load balancer.
 Creating the load balancer frontend...
-Changing domain name configuration for Apigee instance from my-org-eval.apigee.net to 10.95.120.0.nip.io...
+Changing domain name configuration for Apigee instance from my-project-id-eval.apigee.net to 10.95.120.0.nip.io...
 Provisioning SSL certificate...
-Created [https://www.googleapis.com/compute/v1/projects/roweapi2301/global/sslCertificates/apigee].
+Created [https://www.googleapis.com/compute/v1/projects/my-project-id/global/sslCertificates/apigee].
 NAME    TYPE     CREATION_TIMESTAMP             EXPIRE_TIME  MANAGED_STATUS
 apigee  MANAGED  2023-01-25T07:26:59.696-08:00               PROVISIONING
     10.95.120.0.nip.io: PROVISIONING
@@ -158,12 +158,12 @@ Certificate provisioning can take up to an hour. Run this script again in a bit 
 ```
 Setting up external access...
 
-Checking details of the Apigee instance for project roweapi2301...
+Checking details of the Apigee instance for project my-project-id...
 
 *******************************************
 *****     APIGEE INSTANCE DETAILS     *****
 *******************************************
-org: my-org
+org: my-project-id
 host name: 34.111.49.82.nip.io
 instance ip: 10.95.120.2
 location: us-central1
