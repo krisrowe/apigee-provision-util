@@ -9,9 +9,12 @@ export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location"
 export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
 
+export DEFAULT_RESOURCE_NAME=apigee
 export APIGEE_LB_ADDR_NAME=apigee-lb
 export APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
     --global --project=$PROJECT_ID --format="value(address)")
+export APIGEE_CERT_STATUS=$(gcloud compute ssl-certificates list \
+  --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(MANAGED_STATUS)" 2> /dev/null)
 
 printf "${INFO_COLOR}"
 
@@ -23,6 +26,7 @@ printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${INFO_COLOR}\n
 printf "location: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_LOCATION}${INFO_COLOR}\n"
 printf "network: ${HIGHLIGHT_COLOR}${NETWORK_NAME}${INFO_COLOR}\n"
 printf "load balancer: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${INFO_COLOR}\n"
+printf "certificate status: ${HIGHLIGHT_COLOR}${APIGEE_CERT_STATUS}${INFO_COLOR}\n"
 printf -- "-------------------------------------------\n"
 printf "${NO_COLOR}"
 
@@ -46,6 +50,8 @@ if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
         printf "External access has not yet been set up. Run the following."
         printf "\n"
         printf "${EXAMPLE_COLOR}./demo setup-external-access --domain={IP-ADDRESS}.nip.io${INFO_COLOR}\n"
+    elif [[ "${APIGEE_CERT_STATUS}" = "PROVISIONING" ]]; then
+        printf "SSL still provisioning. Try again later.\n"
     else
         echo "Try the following from ANYWHERE..."
         echo
