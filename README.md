@@ -70,7 +70,7 @@ Or even easier, run this command: ./demo test-internal-access
 ## Test access to Apigee from inside the private network
 ### Run this
 ```
-./demo test-internal-access --network=default
+./demo test-internal-access
 ```
 ### Output
 ```
@@ -101,13 +101,13 @@ Cleaning up...
 If you include the `--keep-instance` flag, it will skip the cleanup step of deleting the client compute instance,
 which will cause repeat execution to be quick, without having to wait on provisioning.
 ```
-./demo test-internal-access --network=default --keep-instance
+./demo test-internal-access --keep-instance
 ```
 # Public Internet Access
 ## Setup
 ### Run this
 ```
-./demo setup-external-access --network=default --domain={IP-ADDRESS}.nip.io
+./demo setup-external-access --domain={IP-ADDRESS}.nip.io
 ```
 **NOTE**: You can safely run the above script as many times as you want. It will detect what has already been done and do only what's necessary! 
 ### Output
@@ -142,7 +142,7 @@ Certificate provisioning can take up to an hour. Run this script again in a bit 
 ```
 ### Run this again after a bit
 ```
-./demo setup-external-access --network=default --domain={IP-ADDRESS}.nip.io
+./demo setup-external-access --domain={IP-ADDRESS}.nip.io
 ```
 ### Output
 ```
