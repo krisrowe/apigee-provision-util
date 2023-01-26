@@ -9,22 +9,47 @@ export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location"
 export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
 
+APIGEE_LB_ADDR_NAME=apigee-lb
+APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
+    --global --project=$PROJECT_ID --format="value(address)")
+
 printf "${INFO_COLOR}"
-printf "*******************************************\n"
-printf "*****     APIGEE INSTANCE DETAILS     *****\n"
-printf "*******************************************\n"
+
+printf    "APIGEE INSTANCE DETAILS\n"
+printf -- "-------------------------------------------\n"
 printf "org: ${HIGHLIGHT_COLOR}${PROJECT_ID}${INFO_COLOR}\n"
 printf "host name: ${HIGHLIGHT_COLOR}${APIGEE_HOST_NAME}${INFO_COLOR}\n"
 printf "instance ip: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_HOST_IP}${INFO_COLOR}\n"
 printf "location: ${HIGHLIGHT_COLOR}${APIGEE_INSTANCE_LOCATION}${INFO_COLOR}\n"
-printf "*******************************************\n"
+printf "network: ${HIGHLIGHT_COLOR}${NETWORK_NAME}${INFO_COLOR}\n"
+printf "load balancer: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${INFO_COLOR}\n"
+printf -- "-------------------------------------------\n"
 printf "${NO_COLOR}"
 
+
+
 if [[ -z "$SUPPRESS_DESCRIBE" || "$SUPPRESS_DESCRIBE" = false ]]; then
-    echo
-    echo "Try the following from a machine instance inside project ${PROJECT_ID}..."
+    printf "${INFO_COLOR}\n"
+    printf "INTERNAL ACCESS\n"
+    printf -- "-------------------------------------------\n"
+    printf "Try the following from a machine instance inside project ${HIGHLIGHT_COLOR}${PROJECT_ID}${INFO_COLOR} on the ${HIGHLIGHT_COLOR}${NETWORK_NAME}${INFO_COLOR} network...\n"
     echo
     printf "${EXAMPLE_COLOR}curl -k -H \"Host: ${APIGEE_HOST_NAME}\" \"https://${APIGEE_INSTANCE_HOST_IP}/hello-world\"\n"
-    printf "${NO_COLOR}\n"
-    printf "Or even easier, run this command: ${HIGHLIGHT_COLOR}./demo test-internal-access\n"
+    printf "${INFO_COLOR}\n"
+    printf "Or even easier, run this command: ${EXAMPLE_COLOR}./demo test-internal-access${INFO_COLOR}\n"
+    printf -- "-------------------------------------------${NO_COLOR}\n"
+    
+    printf "${INFO_COLOR}\n"
+    printf "EXTERNAL ACCESS\n"
+    printf -- "-------------------------------------------\n"
+    if [[ -z "$APIGEE_LB_IP" ]]; then
+        printf "External access has not yet been set up. Run the following."
+        printf "\n"
+        printf "${EXAMPLE_COLOR}./demo setup-external-access --domain={IP-ADDRESS}.nip.io${INFO_COLOR}\n"
+    else
+        echo "Try the following from ANYWHERE..."
+        echo
+        printf "${EXAMPLE_COLOR}curl https://${APIGEE_HOST_NAME}/hello-world${INFO_COLOR}\n"
+    fi
+    printf -- "-------------------------------------------${NO_COLOR}\n"
 fi

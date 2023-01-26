@@ -48,6 +48,11 @@ fi
 
 export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
 
+APIGEE_PEERING_RANGE=apigee-peering
+if [[ -z "${NETWORK_NAME}" ]]; then
+    NETWORK_NAME=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(network)" --filter="name=${APIGEE_PEERING_RANGE}" 2> /dev/null)
+fi
+
 # Run the command specified by the user.
 # Apply a regex validation to avoid unsafe script/command execution.
 if [[ $1 =~ ^[A-Za-z0-9_-]+$ ]]; then

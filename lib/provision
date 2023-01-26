@@ -28,7 +28,6 @@ else
   echo "Network previously provisioned."
 fi
 
-export APIGEE_PEERING_RANGE=apigee-peering
 export CONFIRM=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(name)" --filter="name=${APIGEE_PEERING_RANGE}" 2> /dev/null)
 if [[ -z "${CONFIRM}" ]]; then
   echo "Provisioning a /22 peering address range..." # Use --addresses instead to specify addresses.

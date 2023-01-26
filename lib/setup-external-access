@@ -1,8 +1,3 @@
-if [[ -z "${NETWORK_NAME}" ]]; then
-  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
-  exit 1
-fi
-
 printf "Setting up ${HIGHLIGHT_COLOR}external${NO_COLOR} access...\n\n"
 
 echo "Checking details of the Apigee instance for project ${PROJECT_ID}..."
@@ -10,6 +5,11 @@ echo
 export SUPPRESS_DESCRIBE=true # Minimize console output. Mainly just set env vars.
 . $REPO_DIRECTORY/lib/describe # Query the Apigee API and set details to env vars.
 echo
+
+if [[ -z "${NETWORK_NAME}" ]]; then
+  printf "${ERROR_COLOR}Missing --network argument.${NO_COLOR}\n"
+  exit 1
+fi
 
 DEFAULT_RESOURCE_NAME=apigee
 
@@ -27,19 +27,16 @@ else
   echo "Network endpoint group (NEG) previously provisioned."
 fi
 
-APIGEE_LB_ADDR_NAME=apigee-lb
-TEMP_CHECK=$(gcloud compute addresses list \
-  --filter="name=${APIGEE_LB_ADDR_NAME}" --format="value(name)" 2> /dev/null)
-if [[ -z "${TEMP_CHECK}" ]]; then
+if [[ -z "${APIGEE_LB_IP}" ]]; then
   echo "Reserving an IP address for the load balancer."
   gcloud compute addresses create $APIGEE_LB_ADDR_NAME \
     --ip-version=IPV4 --global --project=$PROJECT_ID
+  APIGEE_LB_IP=$(gcloud compute addresses create $APIGEE_LB_ADDR_NAME \
+    --ip-version=IPV4 --global --format=json | jq '.[0].address')
+  printf "${INFO_COLOR}Load balancer IP address: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${NO_COLOR}\n"
 else
   echo "External IP address previously reserved for load balancer as ${TEMP_CHECK}."
 fi
-APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
-    --global --project=$PROJECT_ID --format="value(address)")
-printf "${INFO_COLOR}Load balancer IP address: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${NO_COLOR}\n"
 
 TEMP_CHECK=$(gcloud compute backend-services list \
   --filter="name:${DEFAULT_RESOURCE_NAME}" --format="value(name)" 2> /dev/null)
