@@ -51,20 +51,30 @@ Creating an Apigee organization my-org:
 ```
 ### Output
 ```
-*******************************************
-*****     APIGEE INSTANCE DETAILS     *****
-*******************************************
+APIGEE INSTANCE DETAILS
+-------------------------------------------
 org: my-org
-host name: my-org-eval.apigee.net
+host name: 34.111.49.82.nip.io
 instance ip: 10.95.120.2
 location: us-central1
-*******************************************
+network: default
+load balancer: 34.111.49.82
+certificate status: PROVISIONING
+-------------------------------------------
 
-Try the following from a machine instance inside project roweapi2301...
+INTERNAL ACCESS
+-------------------------------------------
+Try the following from a machine instance inside project my-org on the default network...
 
-curl -k -H "Host: my-org-eval.apigee.net" "https://10.95.120.2/hello-world"
+curl -k -H "Host: 34.111.49.82.nip.io" "https://10.95.120.2/hello-world"
 
 Or even easier, run this command: ./demo test-internal-access
+-------------------------------------------
+
+EXTERNAL ACCESS
+-------------------------------------------
+SSL still provisioning. Try again later.
+-------------------------------------------
 ```
 
 ## Test access to Apigee from inside the private network
