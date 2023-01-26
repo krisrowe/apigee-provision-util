@@ -51,7 +51,7 @@ export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
 APIGEE_PEERING_RANGE=apigee-peering
 
 APIGEE_INSTANCES=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances")
-APIGEE_INSTANCE_JSON=$(echo $APIGEE_CHECK_ACCESS | jq -r ".instances[0]")
+APIGEE_INSTANCE_JSON=$(echo $APIGEE_INSTANCES | jq -r ".instances[0]")
 if ! [[ -z "$APIGEE_INSTANCE_JSON" || "$APIGEE_INSTANCE_JSON" = null ]]; then
   # Apigee instance found.
   if [[ -z "${NETWORK_NAME}" ]]; then
