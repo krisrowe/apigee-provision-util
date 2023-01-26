@@ -9,8 +9,8 @@ export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location"
 export TARGET_SERVICE=$(echo $APIGEE_INSTANCE_JSON | jq -r '.serviceAttachment')
 export APIGEE_HOST_NAME=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/envgroups" | jq -r ".environmentGroups[0].hostnames[0]")
 
-APIGEE_LB_ADDR_NAME=apigee-lb
-APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
+export APIGEE_LB_ADDR_NAME=apigee-lb
+export APIGEE_LB_IP=$(gcloud compute addresses list --filter="name=$APIGEE_LB_ADDR_NAME" \
     --global --project=$PROJECT_ID --format="value(address)")
 
 printf "${INFO_COLOR}"

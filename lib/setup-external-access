@@ -29,8 +29,6 @@ fi
 
 if [[ -z "${APIGEE_LB_IP}" ]]; then
   echo "Reserving an IP address for the load balancer."
-  gcloud compute addresses create $APIGEE_LB_ADDR_NAME \
-    --ip-version=IPV4 --global --project=$PROJECT_ID
   APIGEE_LB_IP=$(gcloud compute addresses create $APIGEE_LB_ADDR_NAME \
     --ip-version=IPV4 --global --format=json | jq '.[0].address')
   printf "${INFO_COLOR}Load balancer IP address: ${HIGHLIGHT_COLOR}${APIGEE_LB_IP}${NO_COLOR}\n"
