@@ -49,8 +49,30 @@ fi
 export AUTH="Authorization: Bearer $(gcloud auth print-access-token)"
 
 APIGEE_PEERING_RANGE=apigee-peering
-if [[ -z "${NETWORK_NAME}" ]]; then
-    NETWORK_NAME=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(network)" --filter="name=${APIGEE_PEERING_RANGE}" 2> /dev/null)
+
+APIGEE_INSTANCES=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances")
+APIGEE_INSTANCE_JSON=$(echo $APIGEE_CHECK_ACCESS | jq -r ".instances[0]")
+if ! [[ -z "$APIGEE_INSTANCE_JSON" || "$APIGEE_INSTANCE_JSON" = null ]]; then
+  # Apigee instance found.
+  if [[ -z "${NETWORK_NAME}" ]]; then
+      # We have an Apigee instance, but no network was specified. 
+      # Let's infer network from peering for existing instance.
+      {
+        NETWORK_NAME=$(gcloud compute addresses list --project=$PROJECT_ID --format="value(network)" --filter="name=${APIGEE_PEERING_RANGE}" 2> /dev/null)
+      } || {
+        # Catching this error prevents the script from stopping here.
+        # Do some command as required for proper syntax here.
+        echo "" > /dev/null 
+      } 
+  fi
+else
+  # It may be fine that we did not find an Apigee instance yet, 
+  # but make sure this is not due to an auth error.
+  APIGEE_ERROR=$(echo $APIGEE_INSTANCES | jq -r ".error")
+  if ! [[ -z "$APIGEE_ERROR" || "$APIGEE_ERROR" = null ]]; then
+    printf "${ERROR_COLOR}Error querying Apigee instances for project ${PROJECT_ID}:\n${APIGEE_ERROR}\n"
+    exit 1
+  fi
 fi
 
 # Run the command specified by the user.

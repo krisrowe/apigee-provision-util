@@ -1,8 +1,8 @@
-export APIGEE_INSTANCE_JSON=$(curl -H "$AUTH" -s "https://apigee.googleapis.com/v1/organizations/$PROJECT_ID/instances" | jq -r ".instances[0]")
 if [[ -z "$APIGEE_INSTANCE_JSON" || "$APIGEE_INSTANCE_JSON" = null ]]; then
     printf "${ERROR_COLOR}Project ${HIGHLIGHT_COLOR}${PROJECT_ID}${ERROR_COLOR} does not have an Apigee instance.\n${NO_COLOR}"
     exit 1
 fi
+
 export APIGEE_INSTANCE_NAME=$(echo $APIGEE_INSTANCE_JSON | jq -r ".name")
 export APIGEE_INSTANCE_HOST_IP=$(echo $APIGEE_INSTANCE_JSON | jq -r ".host")
 export APIGEE_INSTANCE_LOCATION=$(echo $APIGEE_INSTANCE_JSON | jq -r ".location")
