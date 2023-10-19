@@ -25,7 +25,7 @@ gcloud config set project my-project-id
 ## Provision the Apigee Org/Instance
 ### Run this
 ```
-./demo provision --network=default --region=us-central1
+./demo provision --network=default --location=us-central1
 ```
 **NOTE**: You can safely run the above script as many times as you want. It will detect what has already been done and do only what's necessary! 
 ### Output
